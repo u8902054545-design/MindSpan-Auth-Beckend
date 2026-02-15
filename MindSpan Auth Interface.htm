@@ -1,0 +1,85 @@
+// Находим строки в скрипте и заменяем функции:
+
+const API_URL = 'https://script.google.com/macros/s/AKfycby_8h9i3iQZWPLOEF-dWZ9uWy70_dgstkvujcGvh-E69Q7dRnMQBakSaebzVdBbIx8yIA/exec';
+
+async function validateAndNext(isResend = false) {
+    const emailInput = document.getElementById('emailInput');
+    const emailValue = emailInput.value.trim();
+    const emailGroup = document.getElementById('emailGroup');
+    emailGroup.classList.remove('error');
+    toggleOverlay(true);
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'sendCode',
+                email: emailValue
+            })
+        });
+        const result = await response.json();
+
+        toggleOverlay(false);
+
+        if (result.success) {
+            if (!isResend) {
+                authState.currentEmail = emailValue;
+                document.getElementById('displayEmail').textContent = emailValue;
+                startResendTimer();
+                navigate('screen2', 'forward');
+            } else {
+                startResendTimer();
+                updateResendButtonUI();
+            }
+        } else {
+            if (result.message === 'user_not_found') {
+                showError("Пользователь не найден в базе");
+            } else if (result.message === 'account_blocked') {
+                showError("Ваш аккаунт заблокирован");
+            } else {
+                showError("Ошибка сервера. Попробуйте позже");
+            }
+        }
+    } catch (e) {
+        toggleOverlay(false);
+        showError("Нет связи с сервером");
+    }
+}
+
+async function checkCode() {
+    const input = document.getElementById('codeInput');
+    const group = document.getElementById('codeGroup');
+    input.value = input.value.replace(/[^0-9]/g, '');
+    group.classList.remove('error');
+
+    if (input.value.length === 6) {
+        input.blur();
+        toggleOverlay(true);
+        
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'verifyCode',
+                    email: authState.currentEmail,
+                    code: input.value
+                })
+            });
+            const result = await response.json();
+            toggleOverlay(false);
+
+            if (result.success) {
+                setCookie('ms_sid', result.sid, 30);
+                // После успешной авторизации переходим на main.html
+                window.location.href = 'main.html';
+            } else {
+                group.classList.add('error');
+                input.value = "";
+                input.focus();
+            }
+        } catch (e) {
+            toggleOverlay(false);
+            alert("Ошибка при проверке кода");
+        }
+    }
+}

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Система управления - Material 3</title>
+  
+  <!-- Подключение Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Подключение иконок Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Плавные переходы для всех элементов */
+    * {
+      transition: background-color 300ms, border-color 300ms, color 300ms, opacity 300ms, transform 200ms;
+    }
+
+    /* Анимация спиннера Google Chat (Оригинал) */
+    .spinner-full {
+      width: 42px;
+      height: 42px;
+      animation: rotate-container 2.4s linear infinite;
+    }
+
+    .spinner-full svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .spinner-full circle {
+      fill: none;
+      stroke: #a8c7fa; 
+      stroke-width: 4.5;
+      stroke-linecap: round;
+      animation: dash-sync 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes rotate-container {
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes dash-sync {
+      0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+      50% { stroke-dasharray: 100, 150; stroke-dashoffset: -15; }
+      100% { stroke-dasharray: 1, 150; stroke-dashoffset: -125; }
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6); 
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-inactive {
+      background-color: #313033 !important;
+      color: #939099 !important;
+      border-color: #49454F !important;
+      cursor: not-allowed !important;
+    }
+
+    /* Стиль карточек Material 3 Surface */
+    .m3-card {
+      background-color: #1D1B20;
+      border: 1px solid #49454F;
+      border-radius: 28px;
+      padding: 24px;
+    }
+    
+    .m3-card:hover {
+      background-color: #252329;
+      transform: translateY(-2px);
+    }
+
+    /* Стилизация микро-графика */
+    .chart-bar {
+      transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+    .chart-bar:hover {
+      background-color: #EADDFF;
+    }
+  </style>
+</head>
+<body class="bg-[#141218] text-[#E6E0E9] font-sans selection:bg-[#4F378B] selection:text-[#E8DEF8] min-h-screen pb-12">
+
+  <!-- Оверлей загрузки -->
+  <div id="overlay">
+    <div class="spinner-full">
+      <svg viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Шапка системы -->
+  <header class="bg-[#211F26] border-b border-[#36343B] px-4 sm:px-6 py-4 flex flex-col sm:sm:flex-row items-center justify-between gap-4 sticky top-0 z-50 shadow-lg rounded-b-[24px]">
+    <div class="flex items-center gap-4 w-full sm:w-auto">
+      <div id="status-indicator" class="w-12 h-12 rounded-full bg-[#4F378B] flex items-center justify-center text-[#E8DEF8] shrink-0">
+        <i data-lucide="shield" id="status-icon" class="w-6 h-6"></i>
+      </div>
+      <div class="flex flex-col text-left">
+        <h1 id="status-title" class="text-base font-semibold text-[#E6E0E9]">Ожидание авторизации</h1>
+        <p id="status-desc" class="text-xs text-[#CAC4D0] mt-0.5">Доступ к операционной зоне закрыт</p>
+      </div>
+    </div>
+
+    <div class="shrink-0 w-full sm:w-auto">
+      <button id="btn-main" class="w-full sm:w-auto h-[52px] min-w-[180px] inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full font-medium text-sm bg-[#D0BCFF] text-[#381E72] hover:bg-[#E8DEF8] shadow-sm active:opacity-90">
+        <i data-lucide="lock-keyhole" class="w-4 h-4"></i>
+        <span>Войти в зону</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Основной контент -->
+  <main class="max-w-6xl mx-auto px-4 mt-8 space-y-8">
+    
+    <!-- Секция Эффективности и Акций -->
+    <section>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Карточка: KPI (Улучшенный график) -->
+        <div class="m3-card md:col-span-2 flex flex-col justify-between">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[10px] font-bold text-[#D0BCFF] uppercase tracking-[0.1em]">Эффективность смены</span>
+              <div class="flex items-baseline gap-3 mt-1">
+                <span class="text-4xl font-light">94.2%</span>
+                <span class="text-green-400 text-xs font-semibold flex items-center">
+                  <i data-lucide="trending-up" class="w-3 h-3 mr-1"></i> +2.4%
+                </span>
+              </div>
+            </div>
+            <div class="bg-[#49454F]/30 p-2 rounded-xl">
+              <i data-lucide="activity" class="w-5 h-5 text-[#D0BCFF]"></i>
+            </div>
+          </div>
+          
+          <!-- Интерактивный микро-график -->
+          <div class="mt-8 flex items-end justify-between gap-1.5 h-16">
+            <div class="chart-bar w-full bg-[#4F378B]/40 rounded-t-sm h-[45%]" title="08:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[65%]" title="09:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[80%]" title="10:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[55%]" title="11:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[90%]" title="12:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[75%]" title="13:00"></div>
+            <div class="chart-bar w-full bg-[#4F378B]/40 rounded-t-sm h-[40%]" title="14:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[85%]" title="15:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[95%]" title="16:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[70%]" title="17:00"></div>
+            <div class="chart-bar w-full bg-[#4F378B]/40 rounded-t-sm h-[30%]" title="18:00"></div>
+            <div class="chart-bar w-full bg-[#D0BCFF] rounded-t-sm h-[50%]" title="19:00"></div>
+          </div>
+        </div>
+
+        <!-- Карточка: Акции (Обновленная) -->
+        <div class="m3-card bg-[#3B2D4A] border-none flex flex-col justify-between overflow-hidden relative group">
+          <div class="z-10">
+            <h3 class="font-medium text-lg text-[#EADDFF]">Бонусы за KPI</h3>
+            <p class="text-xs text-[#EADDFF]/80 mt-2 leading-relaxed">
+              Дополнительные денежные вознаграждения за достижение высоких показателей производительности в этом месяце.
+            </p>
+          </div>
+          <button class="z-10 mt-6 self-start px-5 py-2.5 bg-[#EADDFF] text-[#381E72] rounded-full text-xs font-bold hover:shadow-lg hover:bg-white transition-all">
+            Проверить план
+          </button>
+          <i data-lucide="coins" class="absolute -right-2 -bottom-2 w-20 h-20 text-[#EADDFF]/10 group-hover:scale-110 transition-transform"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Сетка разделов -->
+    <section>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Раздел: Аналитика -->
+        <div class="m3-card flex flex-col items-center text-center cursor-pointer">
+          <div class="w-12 h-12 bg-[#49454F]/50 rounded-2xl flex items-center justify-center mb-3">
+            <i data-lucide="pie-chart" class="w-5 h-5 text-[#D0BCFF]"></i>
+          </div>
+          <span class="text-sm font-medium">Отчеты</span>
+          <span class="text-[10px] text-[#CAC4D0] mt-1">Статистика смен</span>
+        </div>
+
+        <!-- Раздел: График -->
+        <div class="m3-card flex flex-col items-center text-center cursor-pointer">
+          <div class="w-12 h-12 bg-[#49454F]/50 rounded-2xl flex items-center justify-center mb-3">
+            <i data-lucide="calendar-days" class="w-5 h-5 text-[#D0BCFF]"></i>
+          </div>
+          <span class="text-sm font-medium">Мой график</span>
+          <span class="text-[10px] text-[#CAC4D0] mt-1">Смены и отпуска</span>
+        </div>
+
+        <!-- Раздел: Обучение -->
+        <div class="m3-card flex flex-col items-center text-center cursor-pointer">
+          <div class="w-12 h-12 bg-[#49454F]/50 rounded-2xl flex items-center justify-center mb-3">
+            <i data-lucide="graduation-cap" class="w-5 h-5 text-[#D0BCFF]"></i>
+          </div>
+          <span class="text-sm font-medium">Академия</span>
+          <span class="text-[10px] text-[#CAC4D0] mt-1">Новые курсы</span>
+        </div>
+
+        <!-- Раздел: Поддержка -->
+        <div class="m3-card flex flex-col items-center text-center cursor-pointer">
+          <div class="w-12 h-12 bg-[#49454F]/50 rounded-2xl flex items-center justify-center mb-3">
+            <i data-lucide="heart-handshake" class="w-5 h-5 text-[#D0BCFF]"></i>
+          </div>
+          <span class="text-sm font-medium">Поддержка</span>
+          <span class="text-[10px] text-[#CAC4D0] mt-1">Связаться с нами</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Нижний блок новостей -->
+    <section class="m3-card border-none bg-[#211F26]">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-[#CAC4D0]">Уведомления</h2>
+        <span class="text-xs text-[#D0BCFF] cursor-pointer hover:underline">Прочитать все</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center gap-4 p-4 hover:bg-[#49454F]/20 rounded-2xl cursor-pointer">
+          <div class="w-2 h-2 rounded-full bg-[#D0BCFF] shrink-0"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium leading-none">Обновление регламента безопасности</p>
+            <p class="text-[11px] text-[#CAC4D0] mt-1.5">Сегодня в 09:15 • Администрация</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-[#49454F]"></i>
+        </div>
+        <div class="flex items-center gap-4 p-4 hover:bg-[#49454F]/20 rounded-2xl cursor-pointer">
+          <div class="w-2 h-2 rounded-full bg-transparent shrink-0"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium leading-none">Результаты квартального опроса</p>
+            <p class="text-[11px] text-[#CAC4D0] mt-1.5">Вчера в 18:30 • HR Департамент</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-[#49454F]"></i>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const btnMain = document.getElementById('btn-main');
+    const overlay = document.getElementById('overlay');
+    const statusTitle = document.getElementById('status-title');
+    const statusDesc = document.getElementById('status-desc');
+    const statusIndicator = document.getElementById('status-indicator');
+
+    function finishLoading() {
+      overlay.style.display = 'none';
+      btnMain.disabled = false;
+      btnMain.classList.remove('btn-inactive');
+      
+      statusIndicator.classList.remove('animate-pulse', 'bg-[#313033]');
+      statusIndicator.classList.add('bg-[#4F378B]');
+      statusTitle.textContent = "Ожидание авторизации";
+      statusDesc.textContent = "Доступ к операционной зоне закрыт";
+      statusIndicator.innerHTML = `<i data-lucide="shield" class="w-6 h-6"></i>`;
+      lucide.createIcons();
+    }
+
+    btnMain.addEventListener('click', () => {
+      btnMain.disabled = true;
+      btnMain.classList.add('btn-inactive');
+      overlay.style.display = 'flex';
+      
+      statusIndicator.classList.remove('bg-[#4F378B]');
+      statusIndicator.classList.add('bg-[#313033]', 'animate-pulse');
+      statusTitle.textContent = "Установка связи...";
+      statusDesc.textContent = "Пожалуйста, подождите";
+
+      setTimeout(finishLoading, 2500);
+    });
+  </script>
+</body>
+</html>
+
