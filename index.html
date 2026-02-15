@@ -13,7 +13,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* --- ТВОИ ОРИГИНАЛЬНЫЕ СТИЛИ (СОХРАНЕНЫ ПОЛНОСТЬЮ) --- */
+        /* --- ТВОЙ ОРИГИНАЛЬНЫЙ ДИЗАЙН (СОХРАНЕН ПОЛНОСТЬЮ) --- */
         :root {
             --md-sys-color-background: #141218;
             --md-sys-color-surface: #141218;
@@ -241,7 +241,7 @@
                 </div>
                 <div class="error-message" id="codeError" style="text-align: center; justify-content: center;">
                     <span class="material-symbols-rounded" style="font-size: 14px;">error</span>
-                    <span>Введённый код неверный</span>
+                    <span id="codeErrorText">Введённый код неверный</span>
                 </div>
                 <div class="flex justify-center w-full">
                     <button id="resendBtn" class="resend-btn" onclick="resendCode()" disabled>Отправить новый код через <span>60</span>с</button>
@@ -252,7 +252,6 @@
     </div>
 
     <script>
-        // ТВОЙ URL БЭКЕНДА
         const API_URL = 'https://script.google.com/macros/s/AKfycby_8h9i3iQZWPLOEF-dWZ9uWy70_dgstkvujcGvh-E69Q7dRnMQBakSaebzVdBbIx8yIA/exec';
 
         // --- COOKIE HELPERS ---
@@ -262,7 +261,7 @@
             document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Lax`;
         }
 
-        // --- SESSION CHECK ---
+        // --- SESSION & LOADER ---
         window.addEventListener('DOMContentLoaded', () => {
             const loader = document.getElementById('initialAppLoader');
             setTimeout(() => {
@@ -283,8 +282,7 @@
         };
 
         function toggleOverlay(show) {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.classList.toggle('visible', show);
+            document.getElementById('loadingOverlay').classList.toggle('visible', show);
         }
 
         function checkEmailInput() {
@@ -297,7 +295,6 @@
         function navigate(targetScreenId, direction) {
             if (isAnimating || currentScreenId === targetScreenId) return;
             isAnimating = true;
-
             const currentScreen = document.getElementById(currentScreenId);
             const targetScreen = document.getElementById(targetScreenId);
             const classes = transitionClasses[direction];
@@ -307,23 +304,20 @@
             targetScreen.style.opacity = '1';
             
             requestAnimationFrame(() => {
-                currentScreen.classList.remove('active', 'initial-left', 'initial-right');
                 currentScreen.classList.add(classes.exiting);
                 targetScreen.classList.remove(classes.initial);
                 targetScreen.classList.add(classes.entering);
                 
                 setTimeout(() => {
-                    currentScreen.classList.remove(classes.exiting);
+                    currentScreen.classList.remove('active', classes.exiting);
                     currentScreen.classList.add(direction === 'forward' ? 'initial-left' : 'initial-right');
-                    targetScreen.classList.remove(classes.entering);
                     targetScreen.classList.add('active');
                     currentScreenId = targetScreenId;
                     isAnimating = false;
 
                     if(targetScreenId === 'screen2') {
-                        const input = document.getElementById('codeInput');
-                        input.value = '';
-                        setTimeout(() => input.focus(), 100);
+                        document.getElementById('codeInput').value = '';
+                        setTimeout(() => document.getElementById('codeInput').focus(), 100);
                         updateResendButtonUI();
                         if (timerInterval) clearInterval(timerInterval);
                         timerInterval = setInterval(updateResendButtonUI, 1000);
@@ -332,12 +326,10 @@
             });
         }
 
-        // --- AUTH FLOW (REAL SERVER CONNECTION) ---
+        // --- AUTH LOGIC (СВЯЗЬ С СЕРВЕРОМ) ---
         async function validateAndNext(isResend = false) {
-            const emailInput = document.getElementById('emailInput');
-            const emailValue = emailInput.value.trim();
-            const emailGroup = document.getElementById('emailGroup');
-            emailGroup.classList.remove('error');
+            const emailValue = document.getElementById('emailInput').value.trim();
+            document.getElementById('emailGroup').classList.remove('error');
             toggleOverlay(true);
 
             try {
@@ -359,7 +351,8 @@
                         updateResendButtonUI();
                     }
                 } else {
-                    showError(result.message === 'user_not_found' ? "Пользователь не найден" : "Аккаунт заблокирован");
+                    const msg = result.message === 'account_blocked' ? "Аккаунт заблокирован" : "Пользователь не найден";
+                    showError(msg);
                 }
             } catch (e) {
                 toggleOverlay(false);
@@ -368,9 +361,8 @@
         }
 
         function showError(msg) {
-            const group = document.getElementById('emailGroup');
             document.getElementById('emailErrorText').textContent = msg;
-            group.classList.add('error');
+            document.getElementById('emailGroup').classList.add('error');
         }
 
         async function checkCode() {
@@ -380,9 +372,7 @@
             group.classList.remove('error');
 
             if (input.value.length === 6) {
-                input.blur();
                 toggleOverlay(true);
-                
                 try {
                     const response = await fetch(API_URL, {
                         method: 'POST',
@@ -395,9 +385,10 @@
                         setCookie('ms_sid', result.sid, 30);
                         window.location.href = 'main.html';
                     } else {
+                        const errorMsg = result.message === 'account_blocked' ? "Аккаунт заблокирован" : "Неверный код";
+                        document.getElementById('codeErrorText').textContent = errorMsg;
                         group.classList.add('error');
-                        input.value = "";
-                        input.focus();
+                        if(result.message === 'account_blocked') setTimeout(() => location.reload(), 2000);
                     }
                 } catch (e) {
                     toggleOverlay(false);
@@ -409,7 +400,6 @@
         function startResendTimer() { authState.nextResendTimestamp = Date.now() + 60000; }
         function updateResendButtonUI() {
             const btn = document.getElementById('resendBtn');
-            const span = btn.querySelector('span');
             const timeLeft = Math.ceil((authState.nextResendTimestamp - Date.now()) / 1000);
             if (timeLeft <= 0) {
                 btn.disabled = false; btn.innerHTML = "Отправить новый код"; btn.style.opacity = "1";
@@ -419,7 +409,6 @@
         }
         function resendCode() { if (Date.now() >= authState.nextResendTimestamp) validateAndNext(true); }
         function goBack() { navigate('screen1', 'backward'); }
-
         document.getElementById('emailInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !document.getElementById('nextBtn').disabled) validateAndNext();
         });
